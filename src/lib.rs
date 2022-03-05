@@ -1,8 +1,5 @@
 mod app;
 mod pid;
-
-use crate::app::Application;
-use crate::pid::PidController;
 #[cfg(target_arch = "wasm32")]
 use eframe::wasm_bindgen::{self, prelude::*};
 /// This is the entry-point for all the web-assembly.
@@ -12,6 +9,9 @@ use eframe::wasm_bindgen::{self, prelude::*};
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn start(canvas_id: &str) -> Result<(), eframe::wasm_bindgen::JsValue> {
+
+    use crate::app::Application;
+    use crate::pid::PidController;
     // Make sure panics are logged using `console.error`.
     console_error_panic_hook::set_once();
 
