@@ -69,23 +69,23 @@ impl PidController {
         self.elapsed_time = 0.0;
     }
 
-    fn update(&mut self) {
+    pub fn update(&mut self, d_t: f64) {
         let error = self.setpoint - self.value;
-        let derivative = (error - self.prev_error) / self.env.timestep;
+        let derivative = (error - self.prev_error) / d_t;
 
         self.prev_error = error;
-        self.integral += error * self.env.timestep;
+        self.integral += error * d_t;
 
         self.accel = (error * self.k_p + self.integral * self.k_i + derivative * self.k_d)
             - self.vel * self.env.damping
             + self.env.applied_force;
 
         self.accel = self.accel.clamp(-self.env.max_accel, self.env.max_accel);
-        self.vel += self.accel * self.env.timestep;
-        self.value += self.vel * self.env.timestep;
+        self.vel += self.accel * d_t;
+        self.value += self.vel * d_t;
 
 
-        self.elapsed_time += self.env.timestep;
+        self.elapsed_time += d_t;
     }
 
     pub fn evaluate(&mut self, time: f64) -> Vec<Value> {
@@ -96,7 +96,7 @@ impl PidController {
             if self.elapsed_time - start_time > time {
                 break;
             }
-            self.update();
+            self.update(self.env.timestep);
 
             result.push(Value {
                 x: self.elapsed_time,

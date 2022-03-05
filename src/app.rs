@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use crate::pid::PidController;
 
 use eframe::{
@@ -9,16 +11,19 @@ use eframe::{
     epi,
 };
 
+#[derive(Default)]
 pub struct Application {
     pub controller: PidController,
     pub values: Vec<Value>,
+    pub realtime: bool,
+    pub last_time: Option<Instant>,
 }
 
 impl epi::App for Application {
     fn name(&self) -> &str {
         "PID Playground"
     }
-    
+
     fn max_size_points(&self) -> egui::Vec2 {
         egui::vec2(1920.0, 1080.0)
     }
@@ -32,6 +37,7 @@ impl epi::App for Application {
             .resizable(false)
             .show(ctx, |ui| {
                 ui.heading("");
+                ui.separator();
                 egui::Grid::new("Tuning")
                     .num_columns(2)
                     .striped(true)
@@ -132,6 +138,9 @@ impl epi::App for Application {
                         {
                             dirty = true;
                         }
+
+                        ui.label("Realtime sim.");
+                        ui.checkbox(&mut self.realtime, "");
                     });
             });
 
@@ -162,9 +171,27 @@ impl epi::App for Application {
         // Resize the native window to be just the size we need it to be:
         frame.set_window_size(ctx.used_size());
 
-        if dirty {
+        if !self.realtime && dirty {
             self.controller.reset();
             self.values = self.controller.evaluate(20.0);
+        } else if self.realtime {
+            match self.last_time {
+                Some(v) => {
+                    let d_t = v.elapsed().as_secs_f64();
+                    self.controller.update(d_t);
+
+                    self.values.push(Value {
+                        x: self.controller.elapsed_time,
+                        y: self.controller.value,
+                    });
+                }
+                _ => (),
+            }
+            self.last_time = Some(Instant::now());
+            ctx.request_repaint();
+        }
+        else {
+            self.last_time = None;
         }
     }
 }
