@@ -73,15 +73,17 @@ impl PidController {
         let error = self.setpoint - self.value;
         let derivative = (error - self.prev_error) / self.env.timestep;
 
+        self.prev_error = error;
+        self.integral += error * self.env.timestep;
+
         self.accel = (error * self.k_p + self.integral * self.k_i + derivative * self.k_d)
             - self.vel * self.env.damping
             + self.env.applied_force;
+
         self.accel = self.accel.clamp(-self.env.max_accel, self.env.max_accel);
         self.vel += self.accel * self.env.timestep;
         self.value += self.vel * self.env.timestep;
 
-        self.integral += error;
-        self.prev_error = error;
 
         self.elapsed_time += self.env.timestep;
     }

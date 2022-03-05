@@ -13,7 +13,7 @@ use pid::PidController;
 
 struct Application {
     controller: PidController,
-    values: Vec<egui::plot::Value>,
+    values: Vec<Value>,
 }
 
 impl epi::App for Application {
