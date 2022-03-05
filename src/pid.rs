@@ -91,10 +91,7 @@ impl PidController {
         let start_time = self.elapsed_time;
 
         loop {
-            if self.value < -self.setpoint
-                || self.value > 2.0 * self.setpoint
-                || self.elapsed_time - start_time > time
-            {
+            if self.elapsed_time - start_time > time {
                 break;
             }
             self.update();
