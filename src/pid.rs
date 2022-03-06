@@ -29,7 +29,7 @@ impl Default for Environment {
         Self {
             damping: 1.0,
             applied_force: 0.0,
-            timestep: 0.1,
+            timestep: 0.016,
             max_accel: 10.0,
         }
     }

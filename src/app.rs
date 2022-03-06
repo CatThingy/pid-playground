@@ -142,6 +142,16 @@ impl epi::App for Application {
                         ui.label("Realtime sim.");
                         ui.checkbox(&mut self.realtime, "");
                     });
+                if ui
+                    .add_enabled(
+                        self.realtime,
+                        egui::widgets::Button::new("Reset simulation"),
+                    )
+                    .clicked()
+                {
+                    self.controller.reset();
+                    self.values = vec![];
+                };
 
                 egui::TopBottomPanel::bottom("TEST")
                     .frame(egui::Frame::none())
@@ -182,32 +192,25 @@ impl epi::App for Application {
             self.controller.reset();
             self.values = self.controller.evaluate(20.0, &self.env);
         } else if self.realtime {
-            match self.last_time {
-                Some(v) => {
-                    let d_t = v.elapsed().as_secs_f64();
-                    self.controller.update(&self.env, d_t);
+            self.controller.update(&self.env, 0.01666666666666666666666);
 
-                    self.values.push(Value {
-                        x: self.controller.elapsed_time,
-                        y: self.controller.value,
-                    });
+            self.values.push(Value {
+                x: self.controller.elapsed_time,
+                y: self.controller.value,
+            });
 
-                    if self.controller.elapsed_time > 20.0 {
-                        self.controller.elapsed_time = 20.0;
-                        self.values = self
-                            .values
-                            .iter()
-                            .map(|v| Value {
-                                x: v.x - d_t,
-                                y: v.y,
-                            })
-                            .filter(|v| v.x > 0.0)
-                            .collect::<Vec<Value>>();
-                    }
-                }
-                _ => (),
+            if self.controller.elapsed_time > 20.0 {
+                self.controller.elapsed_time = 20.0;
+                self.values = self
+                    .values
+                    .iter()
+                    .map(|v| Value {
+                        x: v.x - 0.01666666666666666666666,
+                        y: v.y,
+                    })
+                    .filter(|v| v.x > 0.0)
+                    .collect::<Vec<Value>>();
             }
-            self.last_time = Some(Instant::now());
             ctx.request_repaint();
         } else {
             self.last_time = None;
