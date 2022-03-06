@@ -16,6 +16,8 @@ pub fn start(canvas_id: &str) -> Result<(), eframe::wasm_bindgen::JsValue> {
 
     // Redirect tracing to console.log and friends:
     tracing_wasm::set_as_global_default();
+    let mut app = Application::default();
+    app.values = app.controller.evaluate(20.0, &app.env);
 
-    eframe::start_web(canvas_id, Box::new(Application::default()))
+    eframe::start_web(canvas_id, Box::new(app))
 }
