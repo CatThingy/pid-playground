@@ -89,15 +89,15 @@ impl PidController {
         let start_time = self.elapsed_time;
 
         loop {
-            if self.elapsed_time - start_time > time {
-                break;
-            }
             self.update(env, env.timestep);
 
             result.push(Value {
                 x: self.elapsed_time,
                 y: self.value,
             });
+            if self.elapsed_time - start_time > time {
+                break;
+            }
         }
         return result;
     }

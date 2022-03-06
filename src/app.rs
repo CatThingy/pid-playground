@@ -128,18 +128,19 @@ impl epi::App for Application {
                         );
                         ui.end_row();
 
+                        ui.label("Realtime sim.");
+                        let checkbox_res = ui.checkbox(&mut self.realtime, "");
+
                         if !dirty
                             && (damp_res.changed()
                                 || force_res.changed()
                                 || timestep_res.changed()
                                 || setpoint_res.changed()
-                                || max_accel_res.changed())
+                                || max_accel_res.changed()
+                                || (checkbox_res.changed() && !self.realtime))
                         {
                             dirty = true;
                         }
-
-                        ui.label("Realtime sim.");
-                        dirty = dirty || ui.checkbox(&mut self.realtime, "").changed() && !self.realtime;
                     });
                 if ui
                     .add_enabled(
@@ -169,8 +170,8 @@ impl epi::App for Application {
                 .allow_drag(false)
                 .allow_boxed_zoom(false)
                 .include_x(0.0)
-                .include_x(25.0)
-                .include_y(150.0)
+                .include_x(20.0)
+                .include_y(200.0)
                 .include_y(0.0)
                 .legend(egui::plot::Legend::default())
                 .show(ui, |ui| {
@@ -181,7 +182,8 @@ impl epi::App for Application {
                     );
                     ui.line(
                         egui::plot::Line::new(Values::from_values(self.values.to_vec()))
-                            .name("Controller value"),
+                            // Add ZWSP to ensure this lies at the bottom
+                            .name("\u{200b}Controller value"),
                     );
                 });
         });

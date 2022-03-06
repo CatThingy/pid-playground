@@ -8,5 +8,8 @@ use crate::app::Application;
 #[cfg(not(target_family = "wasm"))]
 fn main() {
     let options = eframe::NativeOptions::default();
-    eframe::run_native(Box::new(Application::default()), options);
+    let mut app = Application::default();
+    app.values = app.controller.evaluate(20.0, &app.env);
+
+    eframe::run_native(Box::new(app), options);
 }
