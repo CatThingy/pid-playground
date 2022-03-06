@@ -76,11 +76,10 @@ impl PidController {
         self.prev_error = error;
         self.integral += error * d_t;
 
-        self.accel = (error * self.k_p + self.integral * self.k_i + derivative * self.k_d)
+        self.accel = (error * self.k_p + self.integral * self.k_i + derivative * self.k_d).clamp(-self.env.max_accel, self.env.max_accel)
             - self.vel * self.env.damping
             + self.env.applied_force;
 
-        self.accel = self.accel.clamp(-self.env.max_accel, self.env.max_accel);
         self.vel += self.accel * d_t;
         self.value += self.vel * d_t;
 
