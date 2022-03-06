@@ -142,6 +142,13 @@ impl epi::App for Application {
                         ui.label("Realtime sim.");
                         ui.checkbox(&mut self.realtime, "");
                     });
+
+                egui::TopBottomPanel::bottom("TEST")
+                    .frame(egui::Frame::none())
+                    .show_inside(ui, |ui| {
+                        ui.separator();
+                        ui.label("Hello!");
+                    })
             });
 
         egui::CentralPanel::default().show(ctx, |ui| {
@@ -184,13 +191,26 @@ impl epi::App for Application {
                         x: self.controller.elapsed_time,
                         y: self.controller.value,
                     });
+
+                    if self.controller.elapsed_time > 20.0 {
+                        self.controller.elapsed_time = 20.0;
+                        self.values = self
+                            .values
+                            .iter()
+                            .map(|v| Value {
+                                x: v.x - d_t,
+                                y: v.y,
+                            })
+                            .filter(|v| v.x > 0.0)
+                            .collect::<Vec<Value>>();
+                    }
+
                 }
                 _ => (),
             }
             self.last_time = Some(Instant::now());
             ctx.request_repaint();
-        }
-        else {
+        } else {
             self.last_time = None;
         }
     }
