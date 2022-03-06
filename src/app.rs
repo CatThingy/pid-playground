@@ -1,6 +1,5 @@
-use std::time::Instant;
-
 use crate::pid::PidController;
+use crate::time::Instant;
 
 use eframe::{
     egui::{
@@ -204,7 +203,6 @@ impl epi::App for Application {
                             .filter(|v| v.x > 0.0)
                             .collect::<Vec<Value>>();
                     }
-
                 }
                 _ => (),
             }

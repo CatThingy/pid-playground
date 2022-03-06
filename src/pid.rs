@@ -84,7 +84,6 @@ impl PidController {
         self.vel += self.accel * d_t;
         self.value += self.vel * d_t;
 
-
         self.elapsed_time += d_t;
     }
 
