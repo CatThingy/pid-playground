@@ -6,7 +6,6 @@ use eframe::{
         self,
         plot::{Value, Values},
     },
-    epaint::Color32,
     epi,
 };
 
@@ -140,7 +139,7 @@ impl epi::App for Application {
                         }
 
                         ui.label("Realtime sim.");
-                        ui.checkbox(&mut self.realtime, "");
+                        dirty = dirty || ui.checkbox(&mut self.realtime, "").changed() && !self.realtime;
                     });
                 if ui
                     .add_enabled(
@@ -173,14 +172,16 @@ impl epi::App for Application {
                 .include_x(25.0)
                 .include_y(150.0)
                 .include_y(0.0)
+                .legend(egui::plot::Legend::default())
                 .show(ui, |ui| {
-                    ui.line(egui::plot::Line::new(Values::from_values(
-                        self.values.to_vec(),
-                    )));
                     ui.hline(
                         egui::plot::HLine::new(self.controller.setpoint)
-                            .color(Color32::from_rgb(196, 64, 64))
-                            .style(egui::plot::LineStyle::dashed_loose()),
+                            .style(egui::plot::LineStyle::dashed_loose())
+                            .name("Setpoint"),
+                    );
+                    ui.line(
+                        egui::plot::Line::new(Values::from_values(self.values.to_vec()))
+                            .name("Controller value"),
                     );
                 });
         });
@@ -212,8 +213,6 @@ impl epi::App for Application {
                     .collect::<Vec<Value>>();
             }
             ctx.request_repaint();
-        } else {
-            self.last_time = None;
         }
     }
 }
