@@ -1,4 +1,4 @@
-use crate::pid::PidController;
+use crate::pid::{Environment, PidController};
 use crate::time::Instant;
 
 use eframe::{
@@ -13,6 +13,7 @@ use eframe::{
 #[derive(Default)]
 pub struct Application {
     pub controller: PidController,
+    pub env: Environment,
     pub values: Vec<Value>,
     pub realtime: bool,
     pub last_time: Option<Instant>,
@@ -86,7 +87,7 @@ impl epi::App for Application {
                         ui.label("Damping");
                         let damp_res = ui.add_sized(
                             ui.available_size(),
-                            egui::widgets::DragValue::new(&mut self.controller.env.damping)
+                            egui::widgets::DragValue::new(&mut self.env.damping)
                                 .speed(0.05)
                                 .clamp_range(0.0..=100.0),
                         );
@@ -95,7 +96,7 @@ impl epi::App for Application {
                         ui.label("Applied force");
                         let force_res = ui.add_sized(
                             ui.available_size(),
-                            egui::widgets::DragValue::new(&mut self.controller.env.applied_force)
+                            egui::widgets::DragValue::new(&mut self.env.applied_force)
                                 .speed(0.05)
                                 .clamp_range(-10.0..=10.0),
                         );
@@ -104,7 +105,7 @@ impl epi::App for Application {
                         ui.label("Time step");
                         let timestep_res = ui.add_sized(
                             ui.available_size(),
-                            egui::widgets::DragValue::new(&mut self.controller.env.timestep)
+                            egui::widgets::DragValue::new(&mut self.env.timestep)
                                 .speed(0.005)
                                 .clamp_range(0.001..=1.0),
                         );
@@ -122,7 +123,7 @@ impl epi::App for Application {
                         ui.label("Max. acceleration");
                         let max_accel_res = ui.add_sized(
                             ui.available_size(),
-                            egui::widgets::DragValue::new(&mut self.controller.env.max_accel)
+                            egui::widgets::DragValue::new(&mut self.env.max_accel)
                                 .speed(0.1)
                                 .clamp_range(0.1..=50.0),
                         );
@@ -179,12 +180,12 @@ impl epi::App for Application {
 
         if !self.realtime && dirty {
             self.controller.reset();
-            self.values = self.controller.evaluate(20.0);
+            self.values = self.controller.evaluate(20.0, &self.env);
         } else if self.realtime {
             match self.last_time {
                 Some(v) => {
                     let d_t = v.elapsed().as_secs_f64();
-                    self.controller.update(d_t);
+                    self.controller.update(&self.env, d_t);
 
                     self.values.push(Value {
                         x: self.controller.elapsed_time,
