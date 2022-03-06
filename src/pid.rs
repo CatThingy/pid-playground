@@ -27,7 +27,7 @@ pub struct Environment {
 impl Default for Environment {
     fn default() -> Self {
         Self {
-            damping: 1.0,
+            damping: 0.5,
             applied_force: 0.0,
             timestep: 0.016,
             max_accel: 10.0,
@@ -73,7 +73,8 @@ impl PidController {
         self.prev_error = error;
         self.integral += error * d_t;
 
-        self.accel = (error * self.k_p + self.integral * self.k_i + derivative * self.k_d).clamp(-env.max_accel, env.max_accel)
+        self.accel = (error * self.k_p + self.integral * self.k_i + derivative * self.k_d)
+            .clamp(-env.max_accel, env.max_accel)
             - self.vel * env.damping
             + env.applied_force;
 
