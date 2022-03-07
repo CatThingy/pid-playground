@@ -193,7 +193,7 @@ impl epi::App for Application {
             self.model.reset();
             self.values = self.model.evaluate(20.0, &self.env);
         } else if self.realtime {
-            self.model.update(&self.env, 0.01666666666666666666666);
+            self.model.update(&self.env, 0.016);
 
             self.values.push(Value {
                 x: self.model.elapsed_time,
@@ -206,7 +206,7 @@ impl epi::App for Application {
                     .values
                     .iter()
                     .map(|v| Value {
-                        x: v.x - 0.01666666666666666666666,
+                        x: v.x - 0.016,
                         y: v.y,
                     })
                     .filter(|v| v.x > 0.0)

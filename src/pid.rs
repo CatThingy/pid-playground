@@ -118,6 +118,7 @@ impl Model {
                 break;
             }
         }
+
         return result;
     }
 }
