@@ -1,6 +1,5 @@
 mod app;
 mod pid;
-mod time;
 #[cfg(target_arch = "wasm32")]
 use eframe::wasm_bindgen::{self, prelude::*};
 /// This is the entry-point for all the web-assembly.

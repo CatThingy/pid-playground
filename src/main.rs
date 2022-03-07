@@ -2,7 +2,6 @@
 
 mod app;
 mod pid;
-mod time;
 use crate::app::Application;
 
 #[cfg(not(target_family = "wasm"))]

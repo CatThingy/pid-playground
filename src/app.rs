@@ -1,5 +1,4 @@
 use crate::pid::{Environment, Model};
-use crate::time::Instant;
 
 use eframe::{
     egui::{
