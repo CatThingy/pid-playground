@@ -1,10 +1,6 @@
 use eframe::egui::plot::Value;
 
-pub struct PidController {
-    pub k_p: f64,
-    pub k_i: f64,
-    pub k_d: f64,
-
+pub struct Model {
     pub accel: f64,
     pub vel: f64,
 
@@ -12,6 +8,14 @@ pub struct PidController {
     pub setpoint: f64,
 
     pub elapsed_time: f64,
+
+    pub controller: PidController,
+}
+
+pub struct PidController {
+    pub k_p: f64,
+    pub k_i: f64,
+    pub k_d: f64,
 
     prev_error: f64,
     integral: f64,
@@ -42,38 +46,53 @@ impl Default for PidController {
             k_i: 0.0,
             k_d: 0.0,
 
-            value: 0.0,
-            setpoint: 100.0,
-
-            elapsed_time: 0.0,
-
-            accel: 0.0,
-            vel: 0.0,
-
             prev_error: 0.0,
             integral: 0.0,
         }
     }
 }
 
+impl Default for Model {
+    fn default() -> Self {
+        Self {
+            accel: 0.0,
+            vel: 0.0,
+            value: 0.0,
+            setpoint: 100.0,
+            elapsed_time: 0.0,
+
+            controller: PidController::default(),
+        }
+    }
+}
+
 impl PidController {
     pub fn reset(&mut self) {
-        self.accel = 0.0;
-        self.vel = 0.0;
-        self.value = 0.0;
         self.prev_error = 0.0;
         self.integral = 0.0;
-        self.elapsed_time = 0.0;
     }
-
-    pub fn update(&mut self, env: &Environment, d_t: f64) {
-        let error = self.setpoint - self.value;
+    pub fn update(&mut self, setpoint: f64, value: f64, d_t: f64) -> f64 {
+        let error = setpoint - value;
         let derivative = (error - self.prev_error) / d_t;
 
         self.prev_error = error;
         self.integral += error * d_t;
 
-        self.accel = (error * self.k_p + self.integral * self.k_i + derivative * self.k_d)
+        return error * self.k_p + self.integral * self.k_i + derivative * self.k_d;
+    }
+}
+
+impl Model {
+    pub fn reset(&mut self) {
+        self.controller.reset();
+        self.accel = 0.0;
+        self.vel = 0.0;
+        self.value = 0.0;
+        self.elapsed_time = 0.0;
+    }
+
+    pub fn update(&mut self, env: &Environment, d_t: f64) {
+        self.accel = self.controller.update(self.setpoint, self.value, d_t)
             .clamp(-env.max_accel, env.max_accel)
             - self.vel * env.damping
             + env.applied_force;

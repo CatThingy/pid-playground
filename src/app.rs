@@ -1,4 +1,4 @@
-use crate::pid::{Environment, PidController};
+use crate::pid::{Environment, Model};
 use crate::time::Instant;
 
 use eframe::{
@@ -11,11 +11,10 @@ use eframe::{
 
 #[derive(Default)]
 pub struct Application {
-    pub controller: PidController,
+    pub model: Model,
     pub env: Environment,
     pub values: Vec<Value>,
     pub realtime: bool,
-    pub last_time: Option<Instant>,
 }
 
 impl epi::App for Application {
@@ -49,21 +48,21 @@ impl epi::App for Application {
                         ui.label("kP");
                         let k_p_res = ui.add_sized(
                             ui.available_size(),
-                            egui::widgets::DragValue::new(&mut self.controller.k_p).speed(0.01),
+                            egui::widgets::DragValue::new(&mut self.model.controller.k_p).speed(0.01),
                         );
                         ui.end_row();
 
                         ui.label("kI");
                         let k_i_res = ui.add_sized(
                             ui.available_size(),
-                            egui::widgets::DragValue::new(&mut self.controller.k_i).speed(0.0001),
+                            egui::widgets::DragValue::new(&mut self.model.controller.k_i).speed(0.0001),
                         );
                         ui.end_row();
 
                         ui.label("kD");
                         let k_d_res = ui.add_sized(
                             ui.available_size(),
-                            egui::widgets::DragValue::new(&mut self.controller.k_d).speed(0.01),
+                            egui::widgets::DragValue::new(&mut self.model.controller.k_d).speed(0.01),
                         );
                         ui.end_row();
 
@@ -113,7 +112,7 @@ impl epi::App for Application {
                         ui.label("Setpoint");
                         let setpoint_res = ui.add_sized(
                             ui.available_size(),
-                            egui::widgets::DragValue::new(&mut self.controller.setpoint)
+                            egui::widgets::DragValue::new(&mut self.model.setpoint)
                                 .speed(1)
                                 .clamp_range(0.0..=150.0),
                         );
@@ -149,7 +148,7 @@ impl epi::App for Application {
                     )
                     .clicked()
                 {
-                    self.controller.reset();
+                    self.model.reset();
                     self.values = vec![];
                 };
 
@@ -171,12 +170,12 @@ impl epi::App for Application {
                 .allow_boxed_zoom(false)
                 .include_x(0.0)
                 .include_x(20.0)
-                .include_y(200.0)
+                .include_y(175.0)
                 .include_y(0.0)
                 .legend(egui::plot::Legend::default())
                 .show(ui, |ui| {
                     ui.hline(
-                        egui::plot::HLine::new(self.controller.setpoint)
+                        egui::plot::HLine::new(self.model.setpoint)
                             .style(egui::plot::LineStyle::dashed_loose())
                             .name("Setpoint"),
                     );
@@ -192,18 +191,18 @@ impl epi::App for Application {
         frame.set_window_size(ctx.used_size());
 
         if !self.realtime && dirty {
-            self.controller.reset();
-            self.values = self.controller.evaluate(20.0, &self.env);
+            self.model.reset();
+            self.values = self.model.evaluate(20.0, &self.env);
         } else if self.realtime {
-            self.controller.update(&self.env, 0.01666666666666666666666);
+            self.model.update(&self.env, 0.01666666666666666666666);
 
             self.values.push(Value {
-                x: self.controller.elapsed_time,
-                y: self.controller.value,
+                x: self.model.elapsed_time,
+                y: self.model.value,
             });
 
-            if self.controller.elapsed_time > 20.0 {
-                self.controller.elapsed_time = 20.0;
+            if self.model.elapsed_time > 20.0 {
+                self.model.elapsed_time = 20.0;
                 self.values = self
                     .values
                     .iter()
