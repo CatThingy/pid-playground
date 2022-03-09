@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::pid::{Environment, Model};
 
 use eframe::{
@@ -5,15 +7,16 @@ use eframe::{
         self,
         plot::{Value, Values},
     },
-    epi,
+    epi, epaint::Vec2,
 };
 
 #[derive(Default)]
 pub struct Application {
-    pub model: Model,
+    pub models: Vec<Model>,
     pub env: Environment,
-    pub values: Vec<Value>,
+    pub values: HashMap<u64, Vec<Value>>,
     pub realtime: bool,
+    pub last_model_id: u64,
 }
 
 impl epi::App for Application {
@@ -27,46 +30,68 @@ impl epi::App for Application {
 
     fn update(&mut self, ctx: &egui::Context, frame: &epi::Frame) {
         ctx.set_visuals(egui::Visuals::dark());
-
-        let mut dirty = false;
+        let mut all_dirty = false;
 
         egui::SidePanel::right("Settings")
             .resizable(false)
             .show(ctx, |ui| {
                 ui.heading("");
                 ui.separator();
-                egui::Grid::new("Tuning")
-                    .num_columns(2)
-                    .striped(true)
-                    .max_col_width(100.0)
-                    .min_col_width(100.0)
+                egui::ScrollArea::vertical()
+                    .max_height(300.0)
                     .show(ui, |ui| {
-                        ui.heading("Tuning");
-                        ui.end_row();
+                        for model in self.models.iter_mut() {
+                            egui::Grid::new(model.id)
+                                .num_columns(2)
+                                .striped(true)
+                                .max_col_width(100.0)
+                                .min_col_width(100.0)
+                                .show(ui, |ui| {
+                                    ui.heading("Tuning");
+                                    ui.end_row();
+                                    let size = Vec2::new(80.0, ui.available_height());
 
-                        ui.label("kP");
-                        let k_p_res = ui.add_sized(
-                            ui.available_size(),
-                            egui::widgets::DragValue::new(&mut self.model.controller.k_p).speed(0.01),
-                        );
-                        ui.end_row();
+                                    ui.label("kP");
+                                    let k_p_res = ui.add_sized(
+                                        size,
+                                        egui::widgets::DragValue::new(&mut model.controller.k_p)
+                                            .speed(0.01),
+                                    );
+                                    ui.end_row();
 
-                        ui.label("kI");
-                        let k_i_res = ui.add_sized(
-                            ui.available_size(),
-                            egui::widgets::DragValue::new(&mut self.model.controller.k_i).speed(0.0001),
-                        );
-                        ui.end_row();
+                                    ui.label("kI");
+                                    let k_i_res = ui.add_sized(
+                                        size,
+                                        egui::widgets::DragValue::new(&mut model.controller.k_i)
+                                            .speed(0.0001),
+                                    );
+                                    ui.end_row();
 
-                        ui.label("kD");
-                        let k_d_res = ui.add_sized(
-                            ui.available_size(),
-                            egui::widgets::DragValue::new(&mut self.model.controller.k_d).speed(0.01),
-                        );
-                        ui.end_row();
+                                    ui.label("kD");
+                                    let k_d_res = ui.add_sized(
+                                        size,
+                                        egui::widgets::DragValue::new(&mut model.controller.k_d)
+                                            .speed(0.01),
+                                    );
+                                    ui.end_row();
 
-                        if !dirty && (k_p_res.changed() || k_i_res.changed() || k_d_res.changed()) {
-                            dirty = true;
+                                    ui.label("Max. acceleration");
+                                    let max_accel_res = ui.add_sized(
+                                        size,
+                                        egui::widgets::DragValue::new(&mut model.max_accel)
+                                            .speed(0.1)
+                                            .clamp_range(0.1..=50.0),
+                                    );
+
+                                    if !model.dirty
+                                        && (k_p_res.changed()
+                                            || max_accel_res.changed()
+                                            || k_i_res.changed()
+                                            || k_d_res.changed())
+                                    {
+                                        model.dirty = true;
+                                    }
+                                });
                         }
                     });
 
@@ -89,6 +114,14 @@ impl epi::App for Application {
                                 .clamp_range(0.0..=100.0),
                         );
                         ui.end_row();
+                        ui.label("Setpoint");
+                        let setpoint_res = ui.add_sized(
+                            ui.available_size(),
+                            egui::widgets::DragValue::new(&mut self.env.setpoint)
+                                .speed(1)
+                                .clamp_range(0.0..=150.0),
+                        );
+                        ui.end_row();
 
                         ui.label("Applied force");
                         let force_res = ui.add_sized(
@@ -108,36 +141,19 @@ impl epi::App for Application {
                         );
                         ui.end_row();
 
-                        ui.label("Setpoint");
-                        let setpoint_res = ui.add_sized(
-                            ui.available_size(),
-                            egui::widgets::DragValue::new(&mut self.model.setpoint)
-                                .speed(1)
-                                .clamp_range(0.0..=150.0),
-                        );
-                        ui.end_row();
-
-                        ui.label("Max. acceleration");
-                        let max_accel_res = ui.add_sized(
-                            ui.available_size(),
-                            egui::widgets::DragValue::new(&mut self.env.max_accel)
-                                .speed(0.1)
-                                .clamp_range(0.1..=50.0),
-                        );
                         ui.end_row();
 
                         ui.label("Realtime sim.");
                         let checkbox_res = ui.checkbox(&mut self.realtime, "");
 
-                        if !dirty
+                        if !all_dirty
                             && (damp_res.changed()
                                 || force_res.changed()
-                                || timestep_res.changed()
                                 || setpoint_res.changed()
-                                || max_accel_res.changed()
+                                || timestep_res.changed()
                                 || (checkbox_res.changed() && !self.realtime))
                         {
-                            dirty = true;
+                            all_dirty = true;
                         }
                     });
                 if ui
@@ -147,8 +163,12 @@ impl epi::App for Application {
                     )
                     .clicked()
                 {
-                    self.model.reset();
-                    self.values = vec![];
+                    for model in self.models.iter_mut() {
+                        model.reset();
+                        if let Some(v) = self.values.get_mut(&model.id) {
+                            v.clear();
+                        };
+                    }
                 };
 
                 egui::TopBottomPanel::bottom("TEST")
@@ -174,45 +194,101 @@ impl epi::App for Application {
                 .legend(egui::plot::Legend::default())
                 .show(ui, |ui| {
                     ui.hline(
-                        egui::plot::HLine::new(self.model.setpoint)
+                        egui::plot::HLine::new(self.env.setpoint)
                             .style(egui::plot::LineStyle::dashed_loose())
                             .name("Setpoint"),
                     );
-                    ui.line(
-                        egui::plot::Line::new(Values::from_values(self.values.to_vec()))
+                    for model in self.models.iter() {
+                        let mut name: String = "\u{200b}".to_string();
+                        name.push_str(&model.name);
+                        ui.line(
+                            egui::plot::Line::new(Values::from_values(
+                                self.values[&model.id].to_vec(),
+                            ))
                             // Add ZWSP to ensure this lies at the bottom
-                            .name("\u{200b}Controller value"),
-                    );
+                            .name(name),
+                        );
+                    }
                 });
         });
 
         // Resize the native window to be just the size we need it to be:
         frame.set_window_size(ctx.used_size());
 
-        if !self.realtime && dirty {
-            self.model.reset();
-            self.values = self.model.evaluate(20.0, &self.env);
+        if !self.realtime && all_dirty {
+            for model in self.models.iter_mut() {
+                model.reset();
+                match self.values.get_mut(&model.id) {
+                    Some(v) => {
+                        *v = model.evaluate(20.0, &self.env);
+                    }
+                    None => {
+                        self.values
+                            .insert(model.id, model.evaluate(20.0, &self.env));
+                    }
+                }
+            }
         } else if self.realtime {
-            self.model.update(&self.env, 0.016);
+            for model in self.models.iter_mut() {
+                model.update(&self.env, 0.016);
+                match self.values.get_mut(&model.id) {
+                    Some(v) => {
+                        v.push(Value {
+                            x: model.elapsed_time,
+                            y: model.value,
+                        });
+                        if model.elapsed_time > 20.0 {
+                            model.elapsed_time = 20.0;
+                            *v = v
+                                .iter()
+                                .map(|v| Value {
+                                    x: v.x - 0.016,
+                                    y: v.y,
+                                })
+                                .filter(|v| v.x > 0.0)
+                                .collect::<Vec<Value>>();
+                        }
+                    }
 
-            self.values.push(Value {
-                x: self.model.elapsed_time,
-                y: self.model.value,
-            });
+                    None => {
+                        let mut v: Vec<Value> = vec![];
+                        v.push(Value {
+                            x: model.elapsed_time,
+                            y: model.value,
+                        });
 
-            if self.model.elapsed_time > 20.0 {
-                self.model.elapsed_time = 20.0;
-                self.values = self
-                    .values
-                    .iter()
-                    .map(|v| Value {
-                        x: v.x - 0.016,
-                        y: v.y,
-                    })
-                    .filter(|v| v.x > 0.0)
-                    .collect::<Vec<Value>>();
+                        if model.elapsed_time > 20.0 {
+                            model.elapsed_time = 20.0;
+                            v = v
+                                .iter()
+                                .map(|v| Value {
+                                    x: v.x - 0.016,
+                                    y: v.y,
+                                })
+                                .filter(|v| v.x > 0.0)
+                                .collect::<Vec<Value>>();
+                        }
+                        self.values.insert(model.id, v);
+                    }
+                }
             }
             ctx.request_repaint();
+        } else {
+            for model in self.models.iter_mut() {
+                if model.dirty {
+                    model.reset();
+                    match self.values.get_mut(&model.id) {
+                        Some(v) => {
+                            *v = model.evaluate(20.0, &self.env);
+                        }
+                        None => {
+                            self.values
+                                .insert(model.id, model.evaluate(20.0, &self.env));
+                        }
+                    }
+                }
+                model.dirty = false;
+            }
         }
     }
 }

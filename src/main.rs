@@ -2,13 +2,20 @@
 
 mod app;
 mod pid;
+use crate::pid::Model;
 use crate::app::Application;
 
 #[cfg(not(target_family = "wasm"))]
 fn main() {
     let options = eframe::NativeOptions::default();
     let mut app = Application::default();
-    app.values = app.model.evaluate(20.0, &app.env);
+
+    for _ in 1..10 {
+        let mut model = Model::new("Controller value", app.last_model_id);
+        app.last_model_id += 1;
+        app.values.insert(model.id, model.evaluate(20.0, &app.env).to_vec());
+        app.models.push(model);
+    }
 
     eframe::run_native(Box::new(app), options);
 }
