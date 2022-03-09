@@ -37,10 +37,12 @@ impl epi::App for Application {
             ctx.set_visuals(egui::Visuals::dark());
         }
 
-        let s = ctx.input().screen_rect();
+        let screen = ctx.input().screen_rect();
 
-        if s.width() > s.height() {
+
+        if screen.width() > screen.height() {
             egui::SidePanel::right("Settings")
+                .min_width(215.0)
                 .max_width(215.0)
                 .resizable(false)
                 .show(ctx, |ui| {
@@ -48,6 +50,7 @@ impl epi::App for Application {
                 });
         } else {
             egui::TopBottomPanel::bottom("Settings")
+                .min_height(200.0)
                 .max_height(200.0)
                 .resizable(false)
                 .show(ctx, |ui| {
@@ -60,7 +63,7 @@ impl epi::App for Application {
         }
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.heading("PID Playground");
+            ui.heading(format!("{screen:?}"));
             egui::plot::Plot::new("PID Graph")
                 .allow_zoom(false)
                 .show_x(false)
@@ -114,46 +117,15 @@ impl epi::App for Application {
             for model in self.models.iter_mut() {
                 model.update(&self.env, 0.016);
                 match self.values.get_mut(&model.id) {
-                    Some(v) => {
-                        v.push(Value {
-                            x: model.elapsed_time,
-                            y: model.value,
-                        });
-                        if model.elapsed_time > 20.0 {
-                            model.elapsed_time = 20.0;
-                            *v = v
-                                .iter()
-                                .map(|v| Value {
-                                    x: v.x - 0.016,
-                                    y: v.y,
-                                })
-                                .filter(|v| v.x > 0.0)
-                                .collect::<Vec<Value>>();
-                        }
-                    }
-
+                    Some(v) => update_sim(model, v),
                     None => {
                         let mut v: Vec<Value> = vec![];
-                        v.push(Value {
-                            x: model.elapsed_time,
-                            y: model.value,
-                        });
-
-                        if model.elapsed_time > 20.0 {
-                            model.elapsed_time = 20.0;
-                            v = v
-                                .iter()
-                                .map(|v| Value {
-                                    x: v.x - 0.016,
-                                    y: v.y,
-                                })
-                                .filter(|v| v.x > 0.0)
-                                .collect::<Vec<Value>>();
-                        }
+                        update_sim(model, &mut v);
                         self.values.insert(model.id, v);
                     }
                 }
             }
+            // Continue simulation on the next frame
             ctx.request_repaint();
         } else {
             for model in self.models.iter_mut() {
@@ -188,6 +160,7 @@ impl Application {
             false => egui::ScrollArea::horizontal().max_height(200.0),
         };
 
+        // The same stuff will be displayed, just spaced in different directions
         let mut scroll_item = |ui: &mut Ui, app: &mut Application| {
             for model in app.models.iter_mut() {
                 ui.separator();
@@ -376,4 +349,21 @@ fn tuning_ui(model: &mut Model, ui: &mut Ui) -> Response {
             }
         })
         .response
+}
+fn update_sim(m: &mut Model, v: &mut Vec<Value>) {
+    v.push(Value {
+        x: m.elapsed_time,
+        y: m.value,
+    });
+    if m.elapsed_time > 20.0 {
+        m.elapsed_time = 20.0;
+        *v = v
+            .iter()
+            .map(|v| Value {
+                x: v.x - 0.016,
+                y: v.y,
+            })
+            .filter(|v| v.x > 0.0)
+            .collect::<Vec<Value>>();
+    }
 }
