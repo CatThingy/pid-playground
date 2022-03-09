@@ -10,6 +10,7 @@ use eframe::wasm_bindgen::{self, prelude::*};
 #[wasm_bindgen]
 pub fn start(canvas_id: &str) -> Result<(), eframe::wasm_bindgen::JsValue> {
     use crate::app::Application;
+    use crate::pid::Model;
     // Make sure panics are logged using `console.error`.
     console_error_panic_hook::set_once();
 
