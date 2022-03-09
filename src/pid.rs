@@ -1,5 +1,6 @@
 use eframe::egui::plot::Value;
 
+#[derive(Clone)]
 pub struct Model {
     pub id: u64,
     pub name: String,
@@ -16,6 +17,7 @@ pub struct Model {
     pub dirty: bool,
 }
 
+#[derive(Clone)]
 pub struct PidController {
     pub k_p: f64,
     pub k_i: f64,
@@ -73,6 +75,9 @@ impl PidController {
 }
 
 impl Model {
+    // Prevents warning when compiling - lib.rs only does stuff for WASM, main.rs only does stuff
+    // for native builds
+    #[allow(dead_code)]
     pub fn new(name: &str, id: u64) -> Self {
         Self {
             id,

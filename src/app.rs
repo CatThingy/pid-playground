@@ -6,8 +6,10 @@ use eframe::{
     egui::{
         self,
         plot::{Value, Values},
+        Response, Ui,
     },
-    epi, epaint::Vec2,
+    epaint::Vec2,
+    epi,
 };
 
 #[derive(Default)]
@@ -35,65 +37,56 @@ impl epi::App for Application {
         egui::SidePanel::right("Settings")
             .resizable(false)
             .show(ctx, |ui| {
-                ui.heading("");
+                ui.heading("Tuning");
                 ui.separator();
+
+                let mut duplicated_models = Vec::<Model>::new();
+                let mut deleted_models = Vec::<u64>::new();
+
                 egui::ScrollArea::vertical()
                     .max_height(300.0)
                     .show(ui, |ui| {
                         for model in self.models.iter_mut() {
-                            egui::Grid::new(model.id)
-                                .num_columns(2)
-                                .striped(true)
-                                .max_col_width(100.0)
-                                .min_col_width(100.0)
-                                .show(ui, |ui| {
-                                    ui.heading("Tuning");
-                                    ui.end_row();
-                                    let size = Vec2::new(80.0, ui.available_height());
+                            tuning_ui(model, ui);
+                            if ui.button("Duplicate").clicked() {
+                                let mut new_model = model.clone();
+                                new_model.dirty = true;
+                                new_model.id = self.last_model_id;
+                                self.last_model_id += 1;
+                                self.values.insert(new_model.id, vec![]);
+                                duplicated_models.push(new_model);
+                            }
 
-                                    ui.label("kP");
-                                    let k_p_res = ui.add_sized(
-                                        size,
-                                        egui::widgets::DragValue::new(&mut model.controller.k_p)
-                                            .speed(0.01),
-                                    );
-                                    ui.end_row();
+                            if ui.button("Delete").clicked() {
+                                deleted_models.push(model.id);
+                            }
+                            ui.separator();
+                        }
+                        if ui.button("Add new model").clicked() {
+                            let mut model = Model::new(
+                                &("Model ".to_owned() + &self.last_model_id.to_string()),
+                                self.last_model_id,
+                            );
 
-                                    ui.label("kI");
-                                    let k_i_res = ui.add_sized(
-                                        size,
-                                        egui::widgets::DragValue::new(&mut model.controller.k_i)
-                                            .speed(0.0001),
-                                    );
-                                    ui.end_row();
-
-                                    ui.label("kD");
-                                    let k_d_res = ui.add_sized(
-                                        size,
-                                        egui::widgets::DragValue::new(&mut model.controller.k_d)
-                                            .speed(0.01),
-                                    );
-                                    ui.end_row();
-
-                                    ui.label("Max. acceleration");
-                                    let max_accel_res = ui.add_sized(
-                                        size,
-                                        egui::widgets::DragValue::new(&mut model.max_accel)
-                                            .speed(0.1)
-                                            .clamp_range(0.1..=50.0),
-                                    );
-
-                                    if !model.dirty
-                                        && (k_p_res.changed()
-                                            || max_accel_res.changed()
-                                            || k_i_res.changed()
-                                            || k_d_res.changed())
-                                    {
-                                        model.dirty = true;
-                                    }
-                                });
+                            model.dirty = true;
+                            self.last_model_id += 1;
+                            self.values.insert(model.id, vec![]);
+                            self.models.push(model);
                         }
                     });
+
+                for model in duplicated_models {
+                    self.models.push(model);
+                }
+
+                for id in deleted_models {
+                    self.models = self
+                        .models
+                        .to_vec()
+                        .into_iter()
+                        .filter(|v| v.id != id)
+                        .collect::<Vec<Model>>();
+                }
 
                 ui.separator();
 
@@ -199,15 +192,17 @@ impl epi::App for Application {
                             .name("Setpoint"),
                     );
                     for model in self.models.iter() {
-                        let mut name: String = "\u{200b}".to_string();
-                        name.push_str(&model.name);
-                        ui.line(
-                            egui::plot::Line::new(Values::from_values(
-                                self.values[&model.id].to_vec(),
-                            ))
-                            // Add ZWSP to ensure this lies at the bottom
-                            .name(name),
-                        );
+                        if let Some(v) = self.values.get(&model.id) {
+                            // Add ZWSPs to ensure proper ordering
+                            let mut name: String = "\u{200b}".to_string();
+                            for _ in 0..model.id {
+                                name.push('\u{200b}');
+                            }
+                            name.push_str(&model.name);
+                            ui.line(
+                                egui::plot::Line::new(Values::from_values(v.to_vec())).name(name),
+                            );
+                        }
                     }
                 });
         });
@@ -291,4 +286,58 @@ impl epi::App for Application {
             }
         }
     }
+}
+
+fn tuning_ui(model: &mut Model, ui: &mut Ui) -> Response {
+    egui::Grid::new(model.id)
+        .num_columns(2)
+        .striped(true)
+        .max_col_width(100.0)
+        .min_col_width(100.0)
+        .show(ui, |ui| {
+            let size = Vec2::new(80.0, ui.available_height());
+
+            ui.label("Name");
+            ui.add_sized(size, egui::widgets::TextEdit::singleline(&mut model.name));
+            ui.end_row();
+
+            ui.label("kP");
+            let k_p_res = ui.add_sized(
+                size,
+                egui::widgets::DragValue::new(&mut model.controller.k_p).speed(0.01),
+            );
+            ui.end_row();
+
+            ui.label("kI");
+            let k_i_res = ui.add_sized(
+                size,
+                egui::widgets::DragValue::new(&mut model.controller.k_i).speed(0.0001),
+            );
+            ui.end_row();
+
+            ui.label("kD");
+            let k_d_res = ui.add_sized(
+                size,
+                egui::widgets::DragValue::new(&mut model.controller.k_d).speed(0.01),
+            );
+            ui.end_row();
+
+            ui.label("Max. acceleration");
+            let max_accel_res = ui.add_sized(
+                size,
+                egui::widgets::DragValue::new(&mut model.max_accel)
+                    .speed(0.1)
+                    .clamp_range(0.1..=50.0),
+            );
+
+            if !model.dirty
+                && (k_p_res.changed()
+                    || max_accel_res.changed()
+                    || k_i_res.changed()
+                    || k_d_res.changed())
+            {
+                model.dirty = true;
+            }
+        })
+        .response
 }
