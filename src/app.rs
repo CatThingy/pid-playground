@@ -33,12 +33,16 @@ impl epi::App for Application {
     fn update(&mut self, ctx: &egui::Context, frame: &epi::Frame) {
         let mut all_dirty = false;
 
-        if let Some(_) = frame.info().prefer_dark_mode {
-            ctx.set_visuals(egui::Visuals::dark());
+        if let Some(v) = frame.info().prefer_dark_mode {
+            if v {
+                ctx.set_visuals(egui::Visuals::dark());
+            }
+            else {
+                ctx.set_visuals(egui::Visuals::light());
+            }
         }
 
         let screen = ctx.input().screen_rect();
-
 
         if screen.width() > screen.height() {
             egui::SidePanel::right("Settings")
@@ -63,7 +67,7 @@ impl epi::App for Application {
         }
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.heading(format!("{screen:?}"));
+            ui.heading("PID Playground");
             egui::plot::Plot::new("PID Graph")
                 .allow_zoom(false)
                 .show_x(false)
