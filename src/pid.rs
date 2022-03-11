@@ -17,11 +17,17 @@ pub struct Model {
     pub dirty: bool,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct PidController {
     pub k_p: f64,
     pub k_i: f64,
     pub k_d: f64,
+
+    pub has_integral_limit: bool,
+    pub has_integration_threshold: bool,
+
+    pub integral_limit: f64,
+    pub integration_threshold: f64,
 
     prev_error: f64,
     integral: f64,
@@ -45,19 +51,6 @@ impl Default for Environment {
     }
 }
 
-impl Default for PidController {
-    fn default() -> Self {
-        Self {
-            k_p: 0.0,
-            k_i: 0.0,
-            k_d: 0.0,
-
-            prev_error: 0.0,
-            integral: 0.0,
-        }
-    }
-}
-
 impl PidController {
     pub fn reset(&mut self) {
         self.prev_error = 0.0;
@@ -68,16 +61,22 @@ impl PidController {
         let derivative = (error - self.prev_error) / d_t;
 
         self.prev_error = error;
-        self.integral += error * d_t;
+
+        if !self.has_integration_threshold
+            || (self.has_integration_threshold && self.integration_threshold > error.abs())
+        {
+            self.integral += error * d_t;
+        }
+
+        if self.has_integral_limit {
+            self.integral = self.integral.min(self.integral_limit).max(-self.integral_limit);
+        }
 
         return error * self.k_p + self.integral * self.k_i + derivative * self.k_d;
     }
 }
 
 impl Model {
-    // Prevents warning when compiling - lib.rs only does stuff for WASM, main.rs only does stuff
-    // for native builds
-    #[allow(dead_code)]
     pub fn new(name: &str, id: u64) -> Self {
         Self {
             id,
@@ -91,7 +90,6 @@ impl Model {
             controller: PidController::default(),
             max_accel: 10.0,
         }
-
     }
     pub fn reset(&mut self) {
         self.controller.reset();
@@ -102,7 +100,9 @@ impl Model {
     }
 
     pub fn update(&mut self, env: &Environment, d_t: f64) {
-        self.accel = self.controller.calculate(env.setpoint, self.value, d_t)
+        self.accel = self
+            .controller
+            .calculate(env.setpoint, self.value, d_t)
             .clamp(-self.max_accel, self.max_accel)
             - self.vel * env.damping
             + env.applied_force;

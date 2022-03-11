@@ -36,8 +36,7 @@ impl epi::App for Application {
         if let Some(v) = frame.info().prefer_dark_mode {
             if v {
                 ctx.set_visuals(egui::Visuals::dark());
-            }
-            else {
+            } else {
                 ctx.set_visuals(egui::Visuals::light());
             }
         }
@@ -324,7 +323,7 @@ fn tuning_ui(model: &mut Model, ui: &mut Ui) -> Response {
             ui.label("kI");
             let k_i_res = ui.add_sized(
                 size,
-                egui::widgets::DragValue::new(&mut model.controller.k_i).speed(0.0001),
+                egui::widgets::DragValue::new(&mut model.controller.k_i).speed(0.01),
             );
             ui.end_row();
 
@@ -343,11 +342,40 @@ fn tuning_ui(model: &mut Model, ui: &mut Ui) -> Response {
                     .clamp_range(0.1..=50.0),
             );
 
+            ui.end_row();
+
+            let has_integral_limit_res =
+                ui.checkbox(&mut model.controller.has_integral_limit, "Limit integral");
+
+            let integral_limit_res = ui.add_sized(
+                size,
+                egui::widgets::DragValue::new(&mut model.controller.integral_limit)
+                    .speed(1)
+                    .clamp_range(0.0..=500.0),
+            );
+            ui.end_row();
+
+            let has_integration_threshold_res = ui.checkbox(
+                &mut model.controller.has_integration_threshold,
+                "Integration threshold",
+            );
+
+            let integration_threshold_res = ui.add_sized(
+                size,
+                egui::widgets::DragValue::new(&mut model.controller.integration_threshold)
+                    .speed(0.1)
+                    .clamp_range(0.0..=100.0),
+            );
+
             if !model.dirty
                 && (k_p_res.changed()
                     || max_accel_res.changed()
                     || k_i_res.changed()
-                    || k_d_res.changed())
+                    || k_d_res.changed()
+                    || has_integral_limit_res.changed()
+                    || has_integration_threshold_res.changed()
+                    || integral_limit_res.changed()
+                    || integration_threshold_res.changed())
             {
                 model.dirty = true;
             }
