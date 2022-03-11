@@ -69,7 +69,10 @@ impl PidController {
         }
 
         if self.has_integral_limit {
-            self.integral = self.integral.min(self.integral_limit).max(-self.integral_limit);
+            self.integral = self
+                .integral
+                .min(self.integral_limit)
+                .max(-self.integral_limit);
         }
 
         return error * self.k_p + self.integral * self.k_i + derivative * self.k_d;

@@ -66,7 +66,11 @@ impl epi::App for Application {
         }
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.heading("PID Playground");
+            ui.horizontal(|ui| {
+                ui.heading("PID Playground");
+                ui.separator();
+                ui.hyperlink_to("source code", "https://github.com/catthingy/pid-playground");
+            });
             egui::plot::Plot::new("PID Graph")
                 .allow_zoom(false)
                 .show_x(false)
