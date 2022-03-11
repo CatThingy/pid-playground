@@ -17,7 +17,7 @@ pub fn start(canvas_id: &str) -> Result<(), eframe::wasm_bindgen::JsValue> {
     // Redirect tracing to console.log and friends:
     tracing_wasm::set_as_global_default();
     let mut app = Application::default();
-    let mut model = Model::new("Model 1", app.last_model_id);
+    let mut model = Model::new("Model", app.last_model_id);
     app.last_model_id += 1;
     app.values.insert(model.id, model.evaluate(20.0, &app.env).to_vec());
     app.models.push(model);

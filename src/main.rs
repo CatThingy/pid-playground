@@ -10,7 +10,7 @@ fn main() {
     let options = eframe::NativeOptions::default();
     let mut app = Application::default();
 
-    let mut model = Model::new("Model 1", app.last_model_id);
+    let mut model = Model::new("Model", app.last_model_id);
     app.last_model_id += 1;
     app.values.insert(model.id, model.evaluate(20.0, &app.env).to_vec());
     app.models.push(model);
